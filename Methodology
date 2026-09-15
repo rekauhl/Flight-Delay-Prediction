@@ -1,0 +1,199 @@
+# Methodology
+
+This document explains every meaningful decision behind the project — what
+was chosen, why, and what was tried and changed along the way. Where useful,
+each item is tagged:
+
+- **Sourced** — taken directly from the raw data, no transformation
+- **Derived** — computed from the raw data
+- **Assumption** — a judgment call, stated explicitly so it can be
+  questioned or revisited
+
+## 1. The prediction boundary: Pre-Pushback vs. Post-Pushback
+
+The single most important design decision in this project is *when* the
+model is allowed to make its prediction.
+
+- **Model 1 (Pre-Pushback):** every feature is something known before the
+  aircraft leaves the gate — the schedule, the route, the day, the season.
+- **Model 2 (Post-Pushback):** identical feature set, plus `DepDelay` (how
+  late the aircraft actually left the gate).
+
+`DepDelay` is only known *after* pushback happens, so it is strictly excluded
+from Model 1. It is deliberately included in Model 2 — not as a mistake, but
+as a controlled experiment. Both models share the exact same feature-building
+code; the only difference between them is that one column. This means any
+difference in their performance can be attributed cleanly to that one piece
+of information, rather than to any other change in how the data was prepared.
+
+Also excluded from *both* models, for the same reason as `DepDelay`, but with
+no ambiguity about it: `DepTime`, `TaxiOut`, `TaxiIn`, `WheelsOff`, `WheelsOn`,
+`ActualElapsedTime`, `AirTime`, and the delay-cause breakdown columns
+(`CarrierDelay`, `WeatherDelay`, etc.). None of these are known before or even
+right at pushback — they only exist once the flight is underway or has
+landed.
+
+## 2. Data sourcing
+
+**[Sourced]** US DOT Bureau of Transportation Statistics, "Reporting Carrier
+On-Time Performance" table, downloaded directly from the public TranStats
+PREZIP file server (one file per month).
+
+**[Assumption]** Scope was narrowed to keep the project focused and the data
+volume manageable:
+- **4 carriers:** American, Delta, United, Southwest
+- **10 airports:** ATL, ORD, DFW, DEN, LAX, JFK, SFO, SEA, CLT, MSP
+- **Hub-to-hub only:** both the origin *and* the destination must be in the
+  airport list above. Flights connecting to a smaller airport outside this
+  list are excluded entirely.
+
+This was a deliberate choice over the alternative (keeping any flight that
+touches at least one hub, regardless of the other airport). Hub-to-hub keeps
+every carrier/airport combination well-populated with real data, which
+matters for both fair category comparisons and any future work that might
+need per-route statistics. The trade-off is a smaller, less broadly
+representative dataset — this project is scoped to model a dense, specific
+network well, not the entire US aviation system.
+
+## 3. Why 2024 + 2025, and what didn't work first
+
+The project originally used a single year (2025 only), split by month:
+train on the first eight months, validate on the next two, test on the
+last two.
+
+This turned out to be broken in a specific way. A model trained only on
+January–August has never seen a September, October, November, or December
+flight — no encoding trick changes that fact. One-hot encoding `MONTH` would
+have produced columns for the later months that are always zero during
+training, meaning the model could learn nothing about them at all. Even a
+smoother numeric or cyclical encoding doesn't fix this for a tree-based model
+like Random Forest, since trees only make yes/no threshold splits and cannot
+extrapolate past the range of values they were trained on.
+
+**The fix:** add a second year. Training on all of 2024 means every month is
+genuinely represented before validation or test ever begins.
+
+- **Train:** all of 2024
+- **Validation:** January–June 2025
+- **Test:** July–December 2025
+
+This also fixed a side effect of the old design: the original single-year
+split had noticeably different delay rates across train (23.9%), validation
+(19.3%), and test (25.6%), because it accidentally split the year into a
+naturally calmer stretch (Sep–Oct) versus busier ones. The new split is much
+more balanced (22.2% / 22.4% / 24.3%).
+
+**[Assumption, documented limitation]** Adding a second year didn't fully
+solve the underlying issue — it just made the categories learnable, not
+identical across years. A year-by-year check (`MONTH` delay rate in 2024 vs.
+2025) showed the overall seasonal *shape* holds up well (a summer peak, a
+fall dip, in both years), but a few months moved substantially in exact
+magnitude — most notably **December: 19.1% in 2024 vs. 29.0% in 2025**, a
+real ~10-point shift, not sampling noise. Since December sits in the test
+period, the model has likely learned an outdated sense of how risky December
+actually is. This shows up directly in the results (see Section 6) and is
+treated as an accepted, named limitation rather than something to
+over-engineer around.
+
+**[Assumption]** `YEAR` itself was computed and then dropped entirely — it
+splits perfectly along train (2024) vs. validation/test (2025), so keeping it
+would have let the model learn the boundary of the split itself rather than
+anything meaningful about flights.
+
+## 4. Target definition
+
+**[Sourced]** `ArrDel15` — BTS's own binary flag for "arrived 15+ minutes
+late." Cross-checked against `ArrDelay >= 15` computed independently from the
+raw minutes column: zero mismatches across all ~636,000 rows.
+
+`ArrDelay` (the raw minutes-late column) is kept in the pipeline only for
+this verification step and for exploratory analysis. It is never used as a
+model input, and never used as an alternate target.
+
+Cancelled and diverted flights are dropped before modeling — they have no
+valid arrival delay to predict.
+
+## 5. Features
+
+| Feature | Type | Notes |
+|---|---|---|
+| `Reporting_Airline`, `Origin`, `Dest` | Derived (one-hot) | Categorical, small enough (4/10/10 values) to one-hot directly |
+| `MONTH` | Derived (one-hot) | Safe now that training spans a full year — see Section 3 |
+| `DAY_OF_WEEK` | Derived (one-hot) | Every weekday appears in every split window |
+| `DEP_HOUR`, `ARR_HOUR` | Derived (one-hot) | Every hour with any real flights appears in every split window (hours 2–4 have zero flights in this dataset entirely, so there's no gap to worry about) |
+| `IS_HOLIDAY` | Derived | US federal holidays ± 1 day, via pandas' built-in holiday calendar |
+| `CRSElapsedTime`, `Distance` | Sourced | Used as-is |
+| `DepDelay` | Sourced | Model 2 only — the ablation variable |
+| `YEAR` | Derived, then dropped | See Section 3 |
+
+**[Assumption]** `IS_HOLIDAY` is a partial proxy, not a complete one. It
+covers the holidays themselves and the day on either side, but it misses some
+of the actual busiest travel days of the year — for example, the Sunday after
+Thanksgiving isn't a federal holiday and falls outside the ±1 day window.
+
+**Dropped from the feature set (mined already or not usable):**
+`FlightDate`, `CRSDepTime`, `CRSArrTime` (all converted into the derived
+features above before being dropped), `Cancelled`, `Diverted` (used only to
+filter rows), `ArrDelay` (verification-only, see Section 4).
+
+## 6. Modeling and evaluation
+
+Four models were trained per configuration (Model 1 / Model 2), plus a shared
+baseline:
+
+- **Naive baseline:** always predicts the training set's average delay rate.
+  Computed once — it doesn't use any features, so `DepDelay`'s presence or
+  absence doesn't change it.
+- **Logistic Regression:** standardized inputs, tuned over
+  `class_weight` (unweighted vs. balanced) using validation performance.
+- **Random Forest:** tuned over tree depth, minimum leaf size, and class
+  weight (12 combinations) using validation performance.
+
+Model 1 and Model 2 are tuned **independently** — Model 2 does not reuse
+Model 1's winning settings. This costs a bit of extra compute but avoids a
+real risk: `DepDelay` is such a dominant feature that the *ideal* model
+settings could plausibly be different once it's added, and reusing Model 1's
+settings could have quietly undersold Model 2's true performance.
+
+**Primary metric: PR-AUC.** With only ~23% of flights delayed, plain
+accuracy is misleading — a model that always guesses "on time" already
+scores 77%. PR-AUC focuses specifically on how well the model tells real
+delays apart from false alarms. ROC-AUC is reported alongside it as a more
+familiar reference point.
+
+**Decision threshold:** chosen using the validation set's precision-recall
+curve, targeting ~80% recall (catching 4 out of 5 real delays) — reflecting
+that missing a real delay is more costly than a false alarm, for a use case
+like proactive rebooking or gate planning. This threshold is applied to the
+test set exactly once and never re-adjusted afterward.
+
+All four tuned models hit almost exactly 80% recall on the validation set
+they were tuned on, by construction. On the test set, Model 2's recall holds
+up well (~79–80%). Model 1's does not (~65%) — consistent with the
+year-to-year `MONTH` drift described in Section 3, since Model 1 relies more
+heavily on month-based features than Model 2 does.
+
+**Test PR-AUC being higher than validation PR-AUC across all four models**
+is partly a mechanical effect, not purely better performance: the test period
+happens to have a slightly higher delay rate (24.3%) than validation (22.4%),
+and PR-AUC's baseline floor rises with class prevalence.
+
+## 7. Explicitly out of scope (considered, not built)
+
+- **Per-route/per-carrier historical delay rate:** considered in detail,
+  including a tiered fallback for routes with too little data to trust on
+  their own. Set aside in favor of first testing whether static features
+  (carrier, airport, time, month) were sufficient on their own — which they
+  largely were, based on feature importance results.
+- **Aircraft rotation continuity** (how late an aircraft's previous flight
+  that day was): a genuinely informative pre-pushback signal, but adds real
+  data-quality complexity (tail number reliability, handling the first flight
+  of an aircraft's day) for a project already covering its main ideas without
+  it.
+- **Weather data:** a plausible source of real signal, particularly for the
+  month-level effects described in Section 3, but not pulled in for this
+  version.
+- **XGBoost:** expected to modestly outperform Random Forest here, given its
+  sequential error-correction approach versus Random Forest's averaging
+  approach — not built, since Random Forest already served the project's main
+  purpose (the Model 1 vs. Model 2 comparison).
