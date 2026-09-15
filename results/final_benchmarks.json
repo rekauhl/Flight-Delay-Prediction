@@ -1,0 +1,148 @@
+{
+    "Naive_Baseline": {
+        "val": {
+            "pr_auc": 0.2239,
+            "roc_auc": 0.5
+        },
+        "test": {
+            "pr_auc": 0.2432,
+            "roc_auc": 0.5
+        }
+    },
+    "LR_Model1": {
+        "class_weight": null,
+        "val": {
+            "pr_auc": 0.3334,
+            "roc_auc": 0.6398
+        },
+        "test": {
+            "pr_auc": 0.3796,
+            "roc_auc": 0.658
+        },
+        "operational_eval": {
+            "decision_threshold": 0.1831,
+            "val_recall_achieved": 0.8,
+            "test_precision": 0.3286,
+            "test_recall": 0.6431,
+            "test_f1": 0.4349,
+            "test_prevalence": 0.2432,
+            "lift_over_baseline": 1.5605,
+            "test_confusion_matrix": {
+                "tn": 71030,
+                "fp": 51935,
+                "fn": 14105,
+                "tp": 25416
+            }
+        }
+    },
+    "RF_Model1": {
+        "params": {
+            "max_depth": 20,
+            "min_samples_leaf": 10,
+            "class_weight": "balanced"
+        },
+        "val": {
+            "pr_auc": 0.3295,
+            "roc_auc": 0.6417
+        },
+        "test": {
+            "pr_auc": 0.3888,
+            "roc_auc": 0.6623
+        },
+        "operational_eval": {
+            "decision_threshold": 0.4426,
+            "val_recall_achieved": 0.8,
+            "test_precision": 0.3298,
+            "test_recall": 0.6527,
+            "test_f1": 0.4382,
+            "test_prevalence": 0.2432,
+            "lift_over_baseline": 1.5983,
+            "test_confusion_matrix": {
+                "tn": 70538,
+                "fp": 52427,
+                "fn": 13725,
+                "tp": 25796
+            }
+        },
+        "top_features": {
+            "CRSElapsedTime": 0.0697,
+            "DEP_HOUR_6": 0.0661,
+            "MONTH_10": 0.0475,
+            "Distance": 0.0469,
+            "MONTH_7": 0.0388,
+            "MONTH_5": 0.038,
+            "DEP_HOUR_7": 0.036,
+            "Dest_SFO": 0.0333,
+            "Reporting_Airline_AA": 0.0268,
+            "DEP_HOUR_5": 0.0267
+        }
+    },
+    "LR_Model2": {
+        "class_weight": null,
+        "val": {
+            "pr_auc": 0.8631,
+            "roc_auc": 0.9145
+        },
+        "test": {
+            "pr_auc": 0.8733,
+            "roc_auc": 0.9174
+        },
+        "operational_eval": {
+            "decision_threshold": 0.2037,
+            "val_recall_achieved": 0.8,
+            "test_precision": 0.7528,
+            "test_recall": 0.7963,
+            "test_f1": 0.7739,
+            "test_prevalence": 0.2432,
+            "lift_over_baseline": 3.5907,
+            "test_confusion_matrix": {
+                "tn": 112629,
+                "fp": 10336,
+                "fn": 8050,
+                "tp": 31471
+            }
+        }
+    },
+    "RF_Model2": {
+        "params": {
+            "max_depth": 20,
+            "min_samples_leaf": 10,
+            "class_weight": null
+        },
+        "val": {
+            "pr_auc": 0.8542,
+            "roc_auc": 0.91
+        },
+        "test": {
+            "pr_auc": 0.8688,
+            "roc_auc": 0.916
+        },
+        "operational_eval": {
+            "decision_threshold": 0.1924,
+            "val_recall_achieved": 0.8,
+            "test_precision": 0.7626,
+            "test_recall": 0.7881,
+            "test_f1": 0.7752,
+            "test_prevalence": 0.2432,
+            "lift_over_baseline": 3.5721,
+            "test_confusion_matrix": {
+                "tn": 113271,
+                "fp": 9694,
+                "fn": 8374,
+                "tp": 31147
+            }
+        },
+        "top_features": {
+            "DepDelay": 0.8784,
+            "CRSElapsedTime": 0.0097,
+            "DEP_HOUR_6": 0.0065,
+            "Distance": 0.0063,
+            "MONTH_5": 0.0063,
+            "MONTH_7": 0.0053,
+            "MONTH_10": 0.005,
+            "Dest_SFO": 0.0047,
+            "Reporting_Airline_AA": 0.0033,
+            "DEP_HOUR_7": 0.0033
+        }
+    }
+}
