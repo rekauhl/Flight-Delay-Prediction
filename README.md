@@ -100,14 +100,13 @@ real delays, then applied once to the test set:
 
    ![Seasonality year over year](figures/eda/04_seasonality_2024_vs_2025.png)
 
-## What was intentionally left out
+## What was left out
 
-These were considered and are documented as future work, not built:
+These were considered but not built:
 
 - A feature tracking each airline's recent delay history per route
-- A feature tracking how late an aircraft's *previous* flight that day was
+- A feature tracking how late an aircraft's previous flight that day was
 - Weather data
-- XGBoost, as a stronger alternative to Random Forest
 
 ## Project structure
 
@@ -118,10 +117,10 @@ These were considered and are documented as future work, not built:
 04_modeling_evaluation.py  Trains, tunes, and evaluates both models
 05_visualize_results.py    Produces the results charts above
 
-data/processed/            Cleaned data and feature table
+data                       Cleaned data and feature table
+figures/results/           Model results charts
+figures/eda/               Exploratory data analysis charts
 results/final_benchmarks.json   All metrics, thresholds, and feature importances
-results/figures/           Model results charts
-reports/figures/           Exploratory data analysis charts
 ```
 
 See `METHODOLOGY.md` for the full reasoning behind every design decision,
