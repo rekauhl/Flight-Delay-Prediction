@@ -117,7 +117,7 @@ These were considered but not built:
 04_modeling_evaluation.py  Trains, tunes, and evaluates both models
 05_visualize_results.py    Produces the results charts above
 
-data                       Cleaned data and feature table
+data/                      Cleaned data and feature table
 figures/results/           Model results charts
 figures/eda/               Exploratory data analysis charts
 results/final_benchmarks.json   All metrics, thresholds, and feature importances
