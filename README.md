@@ -34,7 +34,7 @@ answer turns out to be: a lot. See Finding #2 below.
 
 ## Results
 
-### How well does each model separate "will be late" from "won't"?
+### Which model catches delayed flights with the fewest false alarms?
 
 PR-AUC is the primary metric here. With only 23% of flights delayed, plain
 accuracy is misleading, since always guessing "on time" already scores 77%:
