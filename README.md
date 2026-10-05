@@ -111,11 +111,11 @@ These were considered but not built:
 ## Project structure
 
 ```
-01_data_ingestion.py       Downloads and cleans raw flight records
-02_EDA.py                  Explores the data, produces exploratory charts
-03_features.py             Builds the model-ready feature table
-04_modeling_evaluation.py  Trains, tunes, and evaluates both models
-05_visualize_results.py    Produces the results charts above
+code/01_data_ingestion.py       Downloads and cleans raw flight records
+code/02_EDA.py                  Explores the data, produces exploratory charts
+code/03_features.py             Builds the model-ready feature table
+code/04_modeling_evaluation.py  Trains, tunes, and evaluates both models
+code/05_visualize_results.py    Produces the results charts above
 
 data/                      Cleaned data and feature table
 figures/results/           Model results charts
